@@ -73,10 +73,27 @@ the list."
 
 (defun org-linker-search-interface (callback)
   "Select an Org heading and call CALLBACK with its marker.
-Uses `org-ql-completing-read' for completion."
-  (let ((marker (org-ql-completing-read
-                 (org-linker-get-search-buffers)
-                 :prompt "org-linker target: ")))
+Uses `org-ql-completing-read' for completion.
+
+Scope is controlled by `current-prefix-arg':
+  No prefix:  agenda files + current buffer
+  C-u:        current file only
+  C-u C-u:    current buffer only (respects narrowing)"
+  (unless (derived-mode-p 'org-mode)
+    (user-error "Not in an Org buffer"))
+  (let* ((scope (pcase (prefix-numeric-value current-prefix-arg)
+                  (4  (list (current-buffer)))
+                  (16 (list (current-buffer)))
+                  (_  (org-linker-get-search-buffers))))
+         (narrowp (equal (prefix-numeric-value current-prefix-arg) 16))
+         (prompt (pcase (prefix-numeric-value current-prefix-arg)
+                   (4  "org-linker target (file): ")
+                   (16 "org-linker target (narrowed): ")
+                   (_  "org-linker target: ")))
+         (marker (org-ql-completing-read
+                  scope
+                  :prompt prompt
+                  :narrowp narrowp)))
     (funcall callback marker)))
 
 (defun org-linker-callback-wrapper (callback m)
