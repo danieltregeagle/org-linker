@@ -4,7 +4,7 @@
 
 ;; Author: tosh <tosh.lyons@gmail.com>
 ;; Version: 0.1
-;; Package-Requires: ((emacs "24.1") org helm-org-ql)
+;; Package-Requires: ((emacs "25.1") (org "9.0") (org-ql "0.7"))
 ;; URL: https://github.com/toshism/org-linker
 ;; Keywords: convenience, hypermedia
 
@@ -36,12 +36,9 @@
   :group 'org)
 
 ;; Silence byte compiler
-(declare-function helm "ext:helm")
-(declare-function helm-org-ql-source "ext:helm-org-ql")
+(declare-function org-ql-completing-read "ext:org-ql-completing-read")
 (declare-function org-agenda-files "ext:org")
 (declare-function org-back-to-heading "ext:org")
-(defvar helm-input-idle-delay)
-(defvar helm-org-ql-input-idle-delay)
 
 (defvar org-linker-to-heading nil)
 
@@ -60,7 +57,7 @@ If BUFFER-OR-NAME is nil return current buffer's mode."
 
 
 (defun org-linker-get-search-buffers ()
-  "Return a list of buffers to provide to `helm-org-ql`.
+  "Return a list of buffers to provide to `org-ql-completing-read'.
 
 This is defined by `org-linker-buffer-function', and it defaults
 to `org-agenda-files'.
@@ -75,16 +72,12 @@ the list."
           (funcall org-linker-buffer-function)))
 
 (defun org-linker-search-interface (callback)
-  "Setup the helm-org-ql search interface.
-Call CALLBACK with a marker to target heading."
-  (require 'helm-org-ql)
-  (let* ((boolean 'and)
-         (helm-input-idle-delay helm-org-ql-input-idle-delay)
-         (source (helm-org-ql-source (org-linker-get-search-buffers)
-                                     :name "org-linker target")))
-    (setcdr (assoc 'action source) callback)
-    (helm :prompt (format "Query (boolean %s): " (upcase (symbol-name boolean)))
-          :sources source)))
+  "Select an Org heading and call CALLBACK with its marker.
+Uses `org-ql-completing-read' for completion."
+  (let ((marker (org-ql-completing-read
+                 (org-linker-get-search-buffers)
+                 :prompt "org-linker target: ")))
+    (funcall callback marker)))
 
 (defun org-linker-callback-wrapper (callback m)
   "Call user provided CALLBACK with source marker and target marker M.
